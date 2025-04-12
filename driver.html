@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Driver Panel | VYRO CABS</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    body {
+      background: #121212;
+      color: #fff;
+      font-family: 'Segoe UI', sans-serif;
+    }
+    .glass {
+      background: rgba(255, 255, 255, 0.07);
+      border-radius: 12px;
+      padding: 20px;
+      margin: 20px;
+    }
+    .trip-card {
+      border-left: 4px solid #4caf50;
+      background: #1e1e1e;
+      padding: 12px;
+      border-radius: 10px;
+      margin-bottom: 12px;
+    }
+    #map {
+      height: 300px;
+      width: 100%;
+      border-radius: 10px;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="glass">
+    <h2>🚘 Welcome, Driver</h2>
+    <p id="driverName"></p>
+    <p id="vehicleDetails"></p>
+
+    <label>Route:</label>
+    <select id="routeSelect"></select>
+
+    <label>Trip Type:</label>
+    <select id="tripType">
+      <option value="oneway">One Way</option>
+      <option value="recurring">Recurring</option>
+    </select>
+
+    <button onclick="toggleOnline()" class="glass-button" id="toggleBtn">🟢 Go Online</button>
+
+    <div id="tripRequests"></div>
+    <div id="map"></div>
+
+    <h3>📊 Trip Stats</h3>
+    <p>Total Trips: <span id="tripCount">0</span></p>
+    <p>Total Earnings: ₹<span id="totalEarnings">0</span></p>
+    <p>Avg Rating: <span id="avgRating">0</span> ⭐</p>
+
+    <audio id="notifySound" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" preload="auto"></audio>
+
+    <button onclick="logout()" class="glass-button">🚪 Logout</button>
+  </div>
+
+  <script type="module" src="driver-app.js"></script>
+  <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC7h2FlCobLPebgunuZ_l1bEaGV6HS3AbA&callback=initMap"></script>
+</body>
+</html>

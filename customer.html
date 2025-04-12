@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>VYRO CABS | Customer</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      background: #121212;
+      color: #fff;
+    }
+
+    .glass {
+      background: rgba(255, 255, 255, 0.06);
+      padding: 25px;
+      border-radius: 12px;
+      margin: 20px auto;
+      max-width: 420px;
+      backdrop-filter: blur(6px);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    }
+
+    input, select, button {
+      width: 100%;
+      margin: 8px 0;
+      padding: 10px;
+      font-size: 1rem;
+      border-radius: 8px;
+      border: none;
+    }
+
+    button {
+      background: linear-gradient(145deg, #1f1f1f, #292929);
+      color: #fff;
+      cursor: pointer;
+    }
+
+    .tab-title {
+      text-align: center;
+      font-size: 1.4rem;
+      margin-bottom: 20px;
+    }
+
+    #bookingSection {
+      display: none;
+    }
+
+    #recaptcha-container {
+      margin-top: 10px;
+    }
+
+    .toggle-link {
+      text-align: center;
+      margin-top: 10px;
+      color: #90caf9;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="glass">
+    <h2 class="tab-title">🚖 Customer Login</h2>
+
+    <!-- 🔐 Login / Signup Tab -->
+    <div id="loginTab">
+      <input type="text" id="custPhone" placeholder="📱 +91 Phone Number" />
+      <input type="text" id="custName" placeholder="🧑 Full Name" style="display:none;" />
+      <input type="text" id="custOtp" placeholder="🔑 Enter OTP" />
+      <div id="recaptcha-container"></div>
+      <button onclick="sendOTP()">📩 Send OTP</button>
+      <button onclick="verifyOTP()">✅ Verify & Login</button>
+      <div class="toggle-link" onclick="toggleLoginSignup()">New here? Create account</div>
+    </div>
+
+    <!-- Booking section starts in Part 2 -->
+    <div id="bookingSection">
+      <h3 class="tab-title">🚕 Welcome to VYRO CABS</h3>
+<!-- Continue inside <body> -->
+<div id="bookingSection" style="display:none;" class="glass">
+
+  <h2>🧭 Book Your Ride</h2>
+  <label>Choose Booking Mode:</label>
+  <select id="bookingMode" onchange="toggleBookingMode()" class="glass-button">
+    <option value="custom">📌 Custom Location</option>
+    <option value="predefined">🗺️ Select from Routes</option>
+  </select>
+
+  <div id="customBooking" style="margin-top:10px;">
+    <label>Pickup:</label>
+    <select id="locationMode" onchange="switchLocationMode()" class="glass-button">
+      <option value="gps">📍 Use My Location</option>
+      <option value="manual">📌 Drop Pin</option>
+      <option value="address">📝 Enter Address</option>
+    </select>
+
+    <input type="text" id="pickupText" placeholder="Start Address" style="display:none;">
+    <input type="text" id="dropText" placeholder="Destination Address">
+    <input type="number" id="seatCount" min="1" max="6" value="1" placeholder="🪑 No. of seats" />
+    <button onclick="findRoutes()" class="glass-button">🔍 Find Route</button>
+  </div>
+
+  <!-- Predefined Mode Route Display -->
+  <div id="predefinedRoutesList" style="display:none; margin-top:20px;">
+    <h4>📋 Available Routes</h4>
+    <div id="matchedRoutes"></div>
+  </div>
+
+  <div id="map" style="width:100%; height:300px; margin-top:20px; border-radius:8px;"></div>
+</div>
+
+<!-- Trip confirmation and status -->
+<div id="tripStatusBox" class="glass" style="display:none;">
+  <h3>🚘 Your Trip</h3>
+  <p id="tripInfo"></p>
+  <button onclick="cancelTrip()" class="glass-button">❌ Cancel</button>
+</div>
+
+<!-- Invoice after trip -->
+<div id="invoiceBox" class="glass" style="display:none;">
+  <h3>🧾 Trip Invoice</h3>
+  <div id="invoiceDetails"></div>
+  <label>Rate Driver:</label>
+  <select id="ratingSelect">
+    <option value="5">⭐⭐⭐⭐⭐</option>
+    <option value="4">⭐⭐⭐⭐</option>
+    <option value="3">⭐⭐⭐</option>
+    <option value="2">⭐⭐</option>
+    <option value="1">⭐</option>
+  </select>
+  <textarea id="ratingFeedback" placeholder="Optional feedback..." rows="2"></textarea>
+  <button onclick="submitRating()" class="glass-button">📨 Submit</button>
+  <button onclick="downloadInvoice()" class="glass-button">💾 Save PDF</button>
+</div>
+
+<!-- Floating Chat Drawer -->
+<div id="chatDrawer" class="glass" style="position:fixed; right:0; top:0; width:300px; height:100vh; background:#1a1a1a; display:none; padding:15px;">
+  <h4>💬 Chat with Driver</h4>
+  <div id="chatMessages" style="max-height:300px; overflow:auto; background:#2a2a2a; padding:10px; border-radius:8px;"></div>
+  <input type="text" id="chatInput" placeholder="Message..." />
+  <button onclick="sendChat()" class="glass-button">📤 Send</button>
+  <a href="#" id="callDriverBtn" class="glass-button">📞 Call</a>
+  <button onclick="toggleChat()" class="glass-button">❌ Close</button>
+</div>
+
+<!-- Help / Complaint Tab -->
+<div class="glass" style="margin-top:30px;">
+  <h4>🆘 Need Help?</h4>
+  <textarea id="complaintText" placeholder="Describe your issue..." rows="3"></textarea>
+  <button onclick="submitComplaint()" class="glass-button">📩 Submit to Admin</button>
+</div>
+
+<!-- Trip History Tab -->
+<div class="glass" style="margin-top:30px;">
+  <h3>📜 Trip History</h3>
+  <div id="tripHistoryList">Loading...</div>
+</div>
+
+<!-- Logout -->
+<button onclick="logout()" class="glass-button" style="margin-top:20px;">🚪 Logout</button>
+    <!-- 🧾 Trip Invoice -->
+    <div id="invoiceSummary" class="glass" style="display:none; margin-top: 20px;">
+      <h3>🧾 Trip Summary</h3>
+      <div id="invoiceDetails"></div>
+      <label>Rate your trip:</label>
+      <select id="ratingSelect">
+        <option value="5">⭐⭐⭐⭐⭐</option>
+        <option value="4">⭐⭐⭐⭐</option>
+        <option value="3">⭐⭐⭐</option>
+        <option value="2">⭐⭐</option>
+        <option value="1">⭐</option>
+      </select>
+      <textarea id="feedbackText" placeholder="📝 Write a short feedback"></textarea>
+      <button onclick="submitRating()" class="glass-button">📨 Submit Rating</button>
+      <button onclick="savePDF()" class="glass-button">💾 Save Invoice</button>
+    </div>
+
+    <!-- 💬 Chat Drawer -->
+    <div class="chat-drawer" id="chatDrawer" style="display: none; background:#1a1a1a; padding: 15px; position: fixed; top: 0; right: 0; width: 300px; height: 100%; z-index: 1000; overflow-y: auto;">
+      <h3>💬 Chat with Driver</h3>
+      <div id="chatMessages" style="max-height: 200px; overflow-y: auto; margin-bottom: 10px;"></div>
+      <input type="text" id="chatInput" placeholder="Type a message..." />
+      <button onclick="sendChat()" class="glass-button">📤 Send</button>
+      <a id="callDriverBtn" class="glass-button" href="#">📞 Call Driver</a>
+      <button onclick="toggleChat()" class="glass-button">❌ Close Chat</button>
+    </div>
+
+    <!-- 🆘 Help Tab -->
+    <div class="glass" id="helpSection" style="margin-top: 30px;">
+      <h3>🆘 Need Help?</h3>
+      <textarea id="helpMessage" placeholder="Describe your issue..."></textarea>
+      <button onclick="submitComplaint()" class="glass-button">📩 Submit to Admin</button>
+    </div>
+
+    <!-- 🔊 Notification Sound -->
+    <audio id="notifySound" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" preload="auto"></audio>
+
+    <!-- 🌗 Dark Mode -->
+    <button onclick="toggleDarkMode()" class="glass-button" style="margin-top: 20px;">🌗 Toggle Dark Mode</button>
+
+    <!-- 🚪 Logout -->
+    <button onclick="logout()" class="glass-button" style="margin-top: 10px;">🚪 Logout</button>
+  </div>
+
+  <!-- Google Maps Script -->
+  <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC7h2FlCobLPebgunuZ_l1bEaGV6HS3AbA&callback=initMap"></script>
+
+  <!-- Chart.js for rating bar (optional) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- FileSaver for PDF export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+</body>
+</html>

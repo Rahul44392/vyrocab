@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Fleet Manager | VYRO</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="glass">
+    <h2>🚗 Fleet Manager Dashboard</h2>
+    <button onclick="logout()" class="glass-button" style="float:right;">🚪 Logout</button>
+
+    <h3>➕ Add Driver</h3>
+    <input type="text" id="driverName" placeholder="Driver Name" />
+    <input type="tel" id="driverPhone" placeholder="Mobile Number (+91...)" />
+    <input type="text" id="driverId" placeholder="Driver ID" />
+    <input type="password" id="driverPwd" placeholder="Driver Password" />
+
+    <input type="text" id="vehicleNo" placeholder="Vehicle Number" />
+    <select id="vehicleType" onchange="setSeats()">
+      <option value="">Select Vehicle Type</option>
+      <option value="Auto">Auto (3 seats)</option>
+      <option value="Car">Car (4 seats)</option>
+      <option value="SUV">SUV (7 seats)</option>
+      <option value="3-Wheeler">3-Wheeler (6 seats)</option>
+    </select>
+    <input type="number" id="seatCount" placeholder="Total Seats" />
+
+    <label>Upload Driver Photo:</label>
+    <input type="file" id="driverPhoto" />
+    <label>Upload Vehicle Photo:</label>
+    <input type="file" id="vehiclePhoto" />
+    <label>Upload RC Document:</label>
+    <input type="file" id="rcPhoto" />
+
+    <button onclick="addDriver()" class="glass-button">💾 Save Driver</button>
+
+    <h3>📋 Driver List</h3>
+    <div id="driverList"></div>
+
+    <h3>📊 Driver Summary</h3>
+    <canvas id="driverChart" height="100"></canvas>
+  </div>
+
+  <script type="module" src="fleet-app.js"></script>
+</body>
+</html>

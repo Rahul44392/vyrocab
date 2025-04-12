@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Login to VYRO</title>
+  <script src="https://www.gstatic.com/firebasejs/10.10.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.10.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.10.0/firebase-database-compat.js"></script>
+  <style>
+    body {
+      background: #0e1a20;
+      color: white;
+      font-family: Arial, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
+    .login-box {
+      background: #1d2a30;
+      padding: 30px;
+      border-radius: 12px;
+      width: 350px;
+      box-shadow: 0 0 20px #0ff;
+    }
+    select, input, button {
+      width: 100%;
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 6px;
+      border: none;
+    }
+    button {
+      background-color: #1dbf73;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    #otpInput, #recaptcha-container, #signupFields {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-box">
+    <h2>🔐 Login to VYRO</h2>
+
+    <select id="role">
+      <option value="Customer">Customer</option>
+      <option value="Driver">Driver</option>
+      <option value="FleetManager">Fleet Manager</option>
+      <option value="Admin">Admin</option>
+    </select>
+
+    <input type="text" id="phoneOrId" placeholder="📱 Phone / Username" />
+    <input type="password" id="passwordInput" placeholder="🔒 Password" />
+    <input type="text" id="otpInput" placeholder="🔐 Enter OTP" />
+
+    <div id="signupFields">
+      <input type="text" id="fullName" placeholder="🧑 Full Name" />
+    </div>
+
+    <div id="recaptcha-container"></div>
+
+    <button onclick="toggleLoginMethod()">🔁 Toggle Login Method</button>
+    <button onclick="login()">✅ Login</button>
+    <button onclick="sendOTP()">📲 Send OTP</button>
+    <button onclick="verifyOTP()">✔️ Verify OTP</button>
+    <p id="errorMsg" style="color: red;"></p>
+  </div>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyC7h2FlCobLPebgunuZ_l1bEaGV6HS3AbA",
+    authDomain: "vyro-cabs.firebaseapp.com",
+    databaseURL: "https://vyro-cabs-default-rtdb.firebaseio.com",
+    projectId: "vyro-cabs",
+    storageBucket: "vyro-cabs.appspot.com",
+    messagingSenderId: "529641708928",
+    appId: "1:529641708928:web:79d465d693299ad1bdf565"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+  const auth = firebase.auth();
+
+  let isOTPLogin = false;
+  let confirmationResult;
+
+  function toggleLoginMethod() {
+    isOTPLogin = !isOTPLogin;
+    document.getElementById("passwordInput").style.display = isOTPLogin ? "none" : "block";
+    document.getElementById("otpInput").style.display = isOTPLogin ? "block" : "none";
+    document.getElementById("recaptcha-container").style.display = isOTPLogin ? "block" : "none";
+    document.getElementById("signupFields").style.display = isOTPLogin ? "block" : "none";
+  }
+
+  function sendOTP() {
+    const phone = document.getElementById("phoneOrId").value;
+    if (!phone.startsWith("+91")) {
+      alert("Please enter phone number in +91 format");
+      return;
+    }
+
+    window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
+      size: 'normal'
+    });
+
+    auth.signInWithPhoneNumber(phone, window.recaptchaVerifier)
+      .then(result => {
+        confirmationResult = result;
+        document.getElementById("otpInput").style.display = "block";
+      }).catch(e => {
+        document.getElementById("errorMsg").innerText = "OTP Error: " + e.message;
+      });
+  }
+
+  function verifyOTP() {
+    const code = document.getElementById("otpInput").value;
+    const fullName = document.getElementById("fullName").value;
+    const phone = document.getElementById("phoneOrId").value;
+
+    confirmationResult.confirm(code).then(res => {
+      const user = res.user;
+      db.ref(`customers/${user.phoneNumber}`).set({
+        fullName: fullName,
+        phone: user.phoneNumber,
+        password: "",
+        signupTime: Date.now(),
+        trips: 0,
+        rating: 5
+      });
+      alert("Login successful! Redirecting...");
+      window.location.href = "customer.html";
+    }).catch(e => {
+      document.getElementById("errorMsg").innerText = "OTP Invalid!";
+    });
+  }
+
+  function login() {
+    const role = document.getElementById("role").value;
+    const id = document.getElementById("phoneOrId").value;
+    const pass = document.getElementById("passwordInput").value;
+
+    let path = role === "FleetManager" ? "fleet" : role.toLowerCase() + "s";
+
+    db.ref(`${path}/${id}`).once("value", snap => {
+      const data = snap.val();
+      if (!data) return showError("User not found");
+      if (data.password !== pass) return showError("Wrong password");
+
+      localStorage.setItem("userId", id);
+      localStorage.setItem("role", role);
+
+      let route = role === "FleetManager" ? "fleet-manager.html" :
+                  role === "Driver" ? "driver.html" :
+                  role === "Admin" ? "admin.html" :
+                  "customer.html";
+
+      window.location.href = route;
+    });
+  }
+
+  function showError(msg) {
+    document.getElementById("errorMsg").innerText = "❌ " + msg;
+  }
+</script>
+</body>
+</html>

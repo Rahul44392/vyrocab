@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>VYRO CABS | Admin Panel</title>
+  <style>
+    body {
+      background-color: #121212;
+      color: white;
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 20px;
+    }
+    .glass {
+      background: rgba(255, 255, 255, 0.05);
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 30px;
+    }
+    input, button, select {
+      margin: 6px 4px;
+      padding: 10px;
+      font-size: 14px;
+      border-radius: 6px;
+      border: none;
+    }
+    .glass-button {
+      background-color: #2196f3;
+      color: #fff;
+      cursor: pointer;
+    }
+    .glass-button.danger {
+      background-color: #e53935;
+    }
+    .glass-button.edit {
+      background-color: #ffc107;
+    }
+    #map {
+      height: 350px;
+      width: 100%;
+      margin-top: 10px;
+      border-radius: 10px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    th, td {
+      padding: 10px;
+      border: 1px solid #444;
+    }
+    th {
+      background-color: #222;
+    }
+  </style>
+</head>
+<body>
+
+<div class="glass">
+  <h2>🛠️ Admin - Create Route (Map Based)</h2>
+
+  <label for="pointType">Point Type:</label>
+  <select id="pointType">
+    <option value="start">Start Point</option>
+    <option value="mid">Mid Point</option>
+    <option value="end">End Point</option>
+  </select>
+
+  <div id="map"></div>
+
+  <input type="text" id="fleetId" placeholder="Fleet ID">
+  <input type="text" id="fleetPwd" placeholder="Fleet Password">
+  <input type="number" id="fare" placeholder="Fare ₹">
+  <input type="hidden" id="editRouteId">
+  <button onclick="submitRoute()" class="glass-button" id="submitBtn">➕ Add Route</button>
+  <button onclick="resetForm()" class="glass-button danger">🔁 Reset</button>
+  <button onclick="logout()" class="glass-button" style="float:right;">🚪 Logout</button>
+</div>
+<div class="glass">
+  <h3>📋 All Routes</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Route ID</th>
+        <th>Start</th>
+        <th>Midpoints</th>
+        <th>End</th>
+        <th>Fleet</th>
+        <th>Fare</th>
+        <th>Trips</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="routesTableBody"></tbody>
+  </table>
+</div>
+
+<div class="glass">
+  <h3>📊 Analytics</h3>
+  <div id="analyticsStats">Loading...</div>
+</div>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js";
+import {
+  getDatabase, ref, set, update, get, remove
+} from "https://www.gstatic.com/firebasejs/10.10.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyC7h2FlCobLPebgunuZ_l1bEaGV6HS3AbA",
+  authDomain: "vyro-cabs.firebaseapp.com",
+  databaseURL: "https://vyro-cabs-default-rtdb.firebaseio.com",
+  projectId: "vyro-cabs",
+  storageBucket: "vyro-cabs.appspot.com",
+  messagingSenderId: "529641708928",
+  appId: "1:529641708928:web:79d465d693299ad1bdf565"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+let map, geocoder, allMarkers = [];
+let startPoint = null, endPoint = null, midpoints = [];
+
+window.initMap = () => {
+  map = new google.maps.Map(document.getElementById("map"), {
+    center: { lat: 19.1, lng: 72.9 },
+    zoom: 10
+  });
+  geocoder = new google.maps.Geocoder();
+
+  map.addListener("click", async (e) => {
+    const lat = e.latLng.lat();
+    const lng = e.latLng.lng();
+    const type = document.getElementById("pointType").value;
+    const name = await reverseGeocode(lat, lng);
+    const marker = new google.maps.Marker({
+      position: { lat, lng },
+      map,
+      title: `${type.toUpperCase()}: ${name}`
+    });
+    allMarkers.push(marker);
+    const point = { lat, lng, name };
+    if (type === "start") startPoint = point;
+    else if (type === "end") endPoint = point;
+    else midpoints.push(point);
+  });
+
+  loadRoutes();
+  loadAnalytics();
+};
+window.submitRoute = async () => {
+  const fleetId = document.getElementById("fleetId").value;
+  const fleetPwd = document.getElementById("fleetPwd").value;
+  const fare = parseFloat(document.getElementById("fare").value);
+  const routeId = document.getElementById("editRouteId").value || `ROUTE-${Date.now()}-${Math.floor(Math.random()*1000)}`;
+
+  const route = { routeId, fleetId, fare, startPoint, midpoints, endPoint };
+
+  if (document.getElementById("editRouteId").value)
+    await update(ref(db, "routes/" + routeId), route);
+  else
+    await set(ref(db, "routes/" + routeId), route);
+
+  await set(ref(db, "fleets/" + fleetId), { password: fleetPwd, routeId });
+  alert("✅ Route saved!");
+  resetForm();
+  loadRoutes();
+  loadAnalytics();
+};
+
+function resetForm() {
+  startPoint = null;
+  endPoint = null;
+  midpoints = [];
+  allMarkers.forEach(m => m.setMap(null));
+  allMarkers = [];
+  document.getElementById("fleetId").value = "";
+  document.getElementById("fleetPwd").value = "";
+  document.getElementById("fare").value = "";
+  document.getElementById("editRouteId").value = "";
+  document.getElementById("submitBtn").textContent = "➕ Add Route";
+}
+
+async function reverseGeocode(lat, lng) {
+  return new Promise((resolve) => {
+    geocoder.geocode({ location: { lat, lng } }, (res, status) => {
+      if (status === "OK" && res[0]) resolve(res[0].formatted_address);
+      else resolve(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+    });
+  });
+}
+
+async function loadRoutes() {
+  const snap = await get(ref(db, "routes"));
+  const tripsSnap = await get(ref(db, "trips"));
+  const trips = tripsSnap.val() || {};
+  const routes = snap.val() || {};
+  const tbody = document.getElementById("routesTableBody");
+  tbody.innerHTML = "";
+
+  Object.values(routes).forEach(route => {
+    const tripCount = Object.values(trips).filter(t => t.routeId === route.routeId).length;
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td>${route.routeId}</td>
+      <td>${route.startPoint?.name || "-"}</td>
+      <td>${(route.midpoints || []).map(m => m.name).join(", ")}</td>
+      <td>${route.endPoint?.name || "-"}</td>
+      <td>${route.fleetId}</td>
+      <td>₹${route.fare}</td>
+      <td>${tripCount}</td>
+      <td>
+        <button onclick="editRoute('${route.routeId}')" class="glass-button edit">✏️</button>
+        <button onclick="deleteRoute('${route.routeId}')" class="glass-button danger">🗑️</button>
+      </td>
+    `;
+    tbody.appendChild(row);
+  });
+}
+
+window.editRoute = async (id) => {
+  const snap = await get(ref(db, "routes/" + id));
+  const r = snap.val();
+  startPoint = r.startPoint;
+  endPoint = r.endPoint;
+  midpoints = r.midpoints || [];
+  document.getElementById("fleetId").value = r.fleetId;
+  document.getElementById("fare").value = r.fare;
+  document.getElementById("editRouteId").value = r.routeId;
+  document.getElementById("submitBtn").textContent = "💾 Save Route";
+};
+
+window.deleteRoute = async (id) => {
+  if (confirm("Delete this route?")) {
+    await remove(ref(db, "routes/" + id));
+    loadRoutes();
+    loadAnalytics();
+  }
+};
+
+async function loadAnalytics() {
+  const [routesSnap, tripsSnap] = await Promise.all([
+    get(ref(db, "routes")),
+    get(ref(db, "trips"))
+  ]);
+  const routes = routesSnap.val() || {};
+  const trips = Object.values(tripsSnap.val() || {});
+
+  const totalRoutes = Object.keys(routes).length;
+  const totalTrips = trips.length;
+  const revenue = trips.reduce((sum, t) => sum + (t.fare || 0), 0);
+  const ratings = trips.map(t => t.rating).filter(Boolean);
+  const avgRating = ratings.length ? (ratings.reduce((a,b)=>a+b,0)/ratings.length).toFixed(1) : "-";
+  const uniqueCustomers = new Set(trips.map(t => t.customerPhone)).size;
+
+  document.getElementById("analyticsStats").innerHTML = `
+    Total Routes: <b>${totalRoutes}</b><br/>
+    Total Trips: <b>${totalTrips}</b><br/>
+    Total Revenue: <b>₹${revenue}</b><br/>
+    Avg Rating: <b>${avgRating}</b><br/>
+    Unique Customers: <b>${uniqueCustomers}</b>
+  `;
+}
+
+window.logout = () => {
+  localStorage.clear();
+  location.href = "login.html";
+};
+</script>
+
+<!-- Google Maps API -->
+<script async defer
+  src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC7h2FlCobLPebgunuZ_l1bEaGV6HS3AbA&callback=initMap">
+</script>
+</body>
+</html>
